@@ -1,12 +1,12 @@
-const { Client } = require('@line/bot-sdk');
+const { messagingApi, middleware } = require('@line/bot-sdk');
 const { Groq } = require('groq-sdk');
 const express = require('express');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Initialize LINE client
-const lineClient = new Client({
+// Initialize LINE client (v8+ API)
+const lineClient = new messagingApi.MessagingApiClient({
   channelAccessToken: process.env.LINE_ACCESS_TOKEN
 });
 
@@ -44,7 +44,6 @@ async function handleEvent(event) {
   if (!userText) return;
   
   try {
-    // Thai AI prompt
     const systemPrompt = `คุณเป็นผู้ช่วยตอบแชทลูกค้ามืออาชีพ ใช้ภาษาไทยสุภาพ มีหาง "ครับ/ค่ะ" ตามความเหมาะสม ตอบสั้น กระชับ ไม่เกิน 3 บรรทัด`;
     
     const completion = await groq.chat.completions.create({
@@ -59,15 +58,16 @@ async function handleEvent(event) {
     
     const replyText = completion.choices[0]?.message?.content || "ขออภัยครับ ระบบขัดข้องชั่วคราว";
     
-    await lineClient.replyMessage(event.replyToken, {
-      type: 'text',
-      text: replyText
+    // v8+ replyMessage syntax
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: replyText }]
     });
   } catch (error) {
     console.error('Error:', error);
-    await lineClient.replyMessage(event.replyToken, {
-      type: 'text',
-      text: 'ขออภัยครับ เกิดข้อขัดข้องชั่วคราว'
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: 'ขออภัยครับ เกิดข้อขัดข้องชั่วคราว' }]
     });
   }
 }
